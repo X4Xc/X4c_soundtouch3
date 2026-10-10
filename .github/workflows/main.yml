@@ -2,19 +2,51 @@ name: Build X4C_SoundTouch APK
 
 on:
   workflow_dispatch:
+  push:
+    branches: [ main ]
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
+
+      - name: Unzip project if needed
+        run: |
+          ls -la
+          if [ -f "X4C_SoundTouch_FINAL_1Click.zip" ] || [ -f "X4C_SoundTouch_FINAL_1Click_1.zip" ]; then
+            echo "Unzipping..."
+            unzip -o "*.zip" || true
+          fi
+          if [ -d "X4C_SoundTouch" ]; then
+            cp -r X4C_SoundTouch/* . || true
+            cp -r X4C_SoundTouch/.github . 2>/dev/null || true
+          fi
+          ls -la
+          ls -la app/ || true
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
         with:
           java-version: '17'
           distribution: 'temurin'
+
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
+        with:
+          gradle-version: 8.5
+
       - name: Build APK
         run: |
-          mkdir -p app/src/main/java/com/x4c/soundtouch
-          echo "Je hebt alleen workflow, nog geen app code - upload eerst de ZIP inhoud via Code tab"
+          chmod +x gradlew 2>/dev/null || gradle wrapper --gradle-version 8.5
+          chmod +x gradlew
+          ./gradlew assembleDebug --stacktrace
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: X4C_SoundTouch-APK
+          path: app/build/outputs/apk/debug/*.apk
